@@ -1,5 +1,7 @@
 #!/bin/bash
-rm -rf boidsECS/build/Debug/*
-rm -rf boidsECS/build/Release/*
-rm -rf test/build/Debug/*
-rm -rf test/build/Release/*
+rm -rf test/build/**
+rm -rf boidsECS/build/**
+mkdir boidsECS/build/Debug
+mkdir boidsECS/build/Release
+mkdir test/build/Debug
+mkdir test/build/Release

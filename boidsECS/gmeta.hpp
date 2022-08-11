@@ -85,9 +85,9 @@ namespace gmeta
 		static fntraits_more<Fn, Ret, Args...> get_more(Ret(*)(Args...));
 
 		template<typename Functor>
-		static decltype(get_more(&Functor::operator())) get_more(Functor);
+		static decltype(get_more(&Functor::operator())) get_more(Functor&);
 
-		using type = decltype(get_more(std::declval<Fn>()));
+		using type = decltype(get_more(std::declval<Fn&>()));
 	};
 
 	template<typename Fn>

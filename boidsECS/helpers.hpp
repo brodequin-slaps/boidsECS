@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <tuple>
+#include <memory>
+#include <cstring>
 
 //gereral stuff
 
@@ -85,4 +87,60 @@ struct Counter
 struct AspectRatio
 {
 	uint x, y;
+};
+
+template<typename T>
+struct stack_allocated_ptr
+{
+    char stack_mem[sizeof(T)];
+
+    template<typename... Args>
+    stack_allocated_ptr(Args&&... args)
+    {
+		new (stack_mem) T{std::forward<Args>(args)...};
+    }
+
+    operator T*()
+    {
+        return reinterpret_cast<T*>(this);
+    }
+
+	operator T&()
+    {
+        return reinterpret_cast<T&>(this);
+    }
+};
+
+
+template<typename T>
+struct dummy_T : T
+{
+	template<typename... Args>
+    dummy_T(Args&&... args) : T{std::forward<Args>(args)...}
+    {
+    }
+
+	~dummy_T()
+	{
+	}
+
+	dummy_T(dummy_T const& other)
+	{
+	}
+
+	dummy_T(dummy_T&& other)
+	{
+	}
+
+	dummy_T& operator=(dummy_T const& other)
+	{
+	}
+	dummy_T& operator=(dummy_T&& other)
+	{
+	}
+
+	operator T&()
+	{
+		return static_cast<T&>(*this);
+	}
 };

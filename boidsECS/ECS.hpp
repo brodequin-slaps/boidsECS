@@ -19,9 +19,8 @@ template <std::size_t ChunkSize, typename... Ts>
 class ArchetypeChunk
 {
 public:
-	ArchetypeChunk()
+	ArchetypeChunk() : _size{0}
 	{
-		_size = 0;
 	}
 
 	template <typename T>
@@ -386,7 +385,7 @@ public:
 		time_previous_frame = std::chrono::high_resolution_clock::now();
 	}
 
-	ECS(SystemTs&&... systems_) : systems{std::tuple<SystemTs...>{systems_...}}
+	ECS(SystemTs&&... systems_) : systems{std::tuple<SystemTs...>{std::move(systems_)...}}
 	{
 		nextId = 0;
 		size = 0;
@@ -489,6 +488,7 @@ private:
 	{
 		void operator()(Fn &&fn, ArchetypesT &archetypes, DeltaTime dt)
 		{
+			//if constexpr (gmeta::types_t_pack_contains_v<DeltaTime, typename gmeta::fntraits_t<Fn>::Args_t>)
 			if constexpr (gmeta::types_t_pack_contains_v<DeltaTime, typename gmeta::fntraits_t<Fn>::Args_t>)
 			{
 				(std::get<MatchingArchetypes>(archetypes).foreach (std::forward<Fn>(fn), dt), ...);

@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/home/sam/.conan/data/gtest/1.10.0/_/_/source/source_subfolder/googletest/include",
-                "/home/sam/.conan/data/sfml/2.5.1/bincrafters/stable/source/source_subfolder/include",
+                "/home/sam/.conan/data/sfml/2.5.1/_/_/source/source_subfolder/include",
                 "/home/sam/.conan/data/glew/2.2.0/_/_/source/source_subfolder/include"
             ],
             "defines": [],

@@ -1,9 +1,15 @@
 # Using conan (for both src and test folders)
 
-## Using clang
+## Using clang (outdated)
 ```bash
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
+```
+
+## Using g++-11 (good)
+```bash
+export CC=/usr/bin/gcc-11
+export CXX=/usr/bin/g++-11
 ```
 
 ## builds all

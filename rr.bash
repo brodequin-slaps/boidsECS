@@ -1,0 +1,1 @@
+cd boidsECS/build/Release/bin/ && ./boidsECS

@@ -9,7 +9,8 @@
 
 int main()
 {
-    smash_game::game();
+    //smash_game::game();
+    flocon_generator::flocon_generator_ECS();
 
     return 0;
 }

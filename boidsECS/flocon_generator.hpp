@@ -442,45 +442,70 @@ namespace flocon_generator
         config const& cfg;
     };
 
+    template<std::size_t blocks_w, std::size_t blocks_h>
     struct RenderSystem
     {
-        RenderSystem(sf::RenderWindow& window_, std::set<position2i>& structure_, config const& cfg_) : 
+        RenderSystem(sf::RenderWindow& window_, gstructure<blocks_w, blocks_h>& structure_, sf::Shader& fragment_shader_, config const& cfg_) : 
             window{window_},
             structure{structure_},
+            fragment_shader{fragment_shader_},
             cfg{cfg_},
             block{{(float)cfg_.block_size, (float)cfg_.block_size}}
-        {}
+        {
+            //shader init 
+            glewInit(); //required for glGenBuffers otherwise we get segfault
+            glGenBuffers(1, &ssbo);
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+            glBufferData(GL_SHADER_STORAGE_BUFFER, flocon_generator::gstructure<blocks_w, blocks_h>::array_size*8, nullptr, GL_DYNAMIC_DRAW);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+            if (!sf::Shader::isAvailable())
+            {
+                std::cout << "SHADERS UNAVAILABLE!$# ERROR" << std::endl;
+                abort();
+            }
+
+            if (!fragment_shader.loadFromFile("frag.glsl", sf::Shader::Fragment))
+            {
+                std::cout << "Could not load fragment shader" << std::endl;
+                abort();  
+            }
+
+            fragment_shader.setUniform("num_ints_w", (int)(2*structure.num_sizet_w));
+        }
 
         void pre_tick()
         {
-
         }
         
         void post_tick()
         {
+            //update ssbo data
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+            glBufferData(GL_SHADER_STORAGE_BUFFER, flocon_generator::gstructure<blocks_w, blocks_h>::array_size*8, &structure.image, GL_DYNAMIC_DRAW);
 
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+            
+            block.setSize({blocks_w, blocks_h});
+            window.draw(block, &fragment_shader);
+            window.display();
         }
 
         void operator()()
         {
-            window.clear();
-            
-            for(auto const& pos : structure)
-            {
-                block.setPosition({(float) pos.x*cfg.block_size, (float) (cfg.blocks_h - pos.y)*cfg.block_size});
-                window.draw(block);
-            }
 
-            window.display();
         }
 
         sf::RectangleShape block;
+
+        GLuint ssbo;  
+        sf::Shader& fragment_shader;
         
         //captured externals
-        config const& cfg;
-        std::set<position2i>& structure;
-        //gstructure& strructure;
         sf::RenderWindow& window;
+        gstructure<blocks_w, blocks_h>& structure;
+        config const& cfg;
     };
 
     void flocon_generator_ECS()
@@ -497,8 +522,6 @@ namespace flocon_generator
         constexpr std::size_t blocks_w = BLOCKS_W;
         constexpr std::size_t blocks_h = BLOCKS_H;
 
-        sf::RenderWindow window(sf::VideoMode(BLOCKS_W* BLOCK_PIXELS, BLOCKS_H* BLOCK_PIXELS), "boidsECS", sf::Style::Titlebar | sf::Style::Close);
-
         //set<position2i> structure;
         gstructure<blocks_w, blocks_h> structure;
 
@@ -514,15 +537,22 @@ namespace flocon_generator
         auto pos_rand_y = std::bind(std::uniform_int_distribution<int>(0, blocks_h),
                         mt19937_64(seed++));
 
+        sf::RenderWindow window(sf::VideoMode(BLOCKS_W* BLOCK_PIXELS, BLOCKS_H* BLOCK_PIXELS), "boidsECS", sf::Style::Titlebar | sf::Style::Close);
+        sf::Shader fragment_shader;
+
+        //TRY and put this inside render system not to pollute everything with it
+
         using gmeta::types_t;
         ECS<types_t<
             Archetype<1024, position2i, speed2i>>,
         types_t<
             CollisionSystem<blocks_w, blocks_h>,
-            PositionUpdateSystem
+            PositionUpdateSystem,
+            RenderSystem<blocks_w, blocks_h>
         >> ecs{
             CollisionSystem<blocks_w, blocks_h>{structure, cfg}, 
-            PositionUpdateSystem{cfg}};
+            PositionUpdateSystem{cfg},
+            RenderSystem<blocks_w, blocks_h>{window, structure, fragment_shader, cfg}};
 
             //init
             for (int i = 0; i < num_particles; i++)
@@ -541,41 +571,15 @@ namespace flocon_generator
             }
 
 
-
-            //shader shit
-            if (!sf::Shader::isAvailable())
-            {
-                std::cout << "SHADERS UNAVAILABLE!$# ERROR" << std::endl;
-                abort();
-            }
-            sf::Shader fragment_shader;
-
-            if (!fragment_shader.loadFromFile("frag.glsl", sf::Shader::Fragment))
-            {
-                std::cout << "Could not load fragment shader" << std::endl;
-                abort();  
-            }
-
-            fragment_shader.setUniform("num_ints_w", (int)(2*structure.num_sizet_w));
-
             std::array<uint64_t, flocon_generator::gstructure<blocks_w, blocks_h>::array_size> test_array;
             for (uint64_t& x : test_array)
             {
                 x = ~0;
             }
 
-            GLuint ssbo;
-            glewInit(); //required for glGenBuffers otherwise we get segfault
-            glGenBuffers(1, &ssbo);
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-            glBufferData(GL_SHADER_STORAGE_BUFFER, flocon_generator::gstructure<blocks_w, blocks_h>::array_size*8, nullptr, GL_DYNAMIC_DRAW);
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
             using Clock = std::chrono::high_resolution_clock;
             auto time_start = Clock::now();
             size_t frame_counter = 0;
-            sf::RectangleShape block({(float)block_size, (float)block_size});
             while(window.isOpen())
             {
                 sf::Event event;
@@ -587,19 +591,7 @@ namespace flocon_generator
 
                 ecs.tick();
 
-                window.clear();
-
-                //update ssbo data
-                
-                glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-                glBufferData(GL_SHADER_STORAGE_BUFFER, flocon_generator::gstructure<blocks_w, blocks_h>::array_size*8, &structure.image, GL_DYNAMIC_DRAW);
-
-                glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-                
-
-                block.setSize({blocks_w, blocks_h});
-                window.draw(block, &fragment_shader);
-                window.display();
+                //window.clear();
                 
                 //FPS shit
                 const size_t report_each_N_frames = 50;

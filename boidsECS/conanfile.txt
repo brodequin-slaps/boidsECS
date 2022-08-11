@@ -1,9 +1,10 @@
 [requires]
-sfml/2.5.1@bincrafters/stable
+sfml/2.5.1
 glew/2.2.0
 opengl/system
 
 [options]
+sfml:shared=False
 sfml:graphics=True
 sfml:window=True
 sfml:audio=False
